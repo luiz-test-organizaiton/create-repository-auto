@@ -132,10 +132,10 @@ jobs:
 
                 steps:
                     - name: Validate PR title pattern
-                    env:
-                        PR_TITLE: ${{ github.event.pull_request.title }}
-                    run: |
-                        set -euo pipefail
+                        env:
+                            PR_TITLE: ${{ github.event.pull_request.title }}
+                        run: |
+                            set -euo pipefail
 
                         echo "PR title: ${PR_TITLE}"
 
