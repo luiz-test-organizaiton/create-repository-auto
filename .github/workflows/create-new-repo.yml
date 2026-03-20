@@ -58,7 +58,7 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             "/orgs/${ORG_NAME}/repos" \
             -f name="${REPO_NAME}" \
-            -F private=true \
+            -F private=false \
             -F auto_init=true
 
       - name: Add devops team as admin
