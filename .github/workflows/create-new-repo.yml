@@ -233,7 +233,7 @@ jobs:
             "enforce_admins": true,
             "required_pull_request_reviews": {
               "dismiss_stale_reviews": true,
-              "required_approving_review_count": 1
+              "required_approving_review_count": 0
             },
             "restrictions": null,
             "required_linear_history": false,
@@ -264,7 +264,7 @@ jobs:
             "enforce_admins": true,
             "required_pull_request_reviews": {
               "dismiss_stale_reviews": true,
-              "required_approving_review_count": 1
+              "required_approving_review_count": 0
             },
             "restrictions": null,
             "required_linear_history": false,
@@ -295,7 +295,7 @@ jobs:
             "enforce_admins": true,
             "required_pull_request_reviews": {
               "dismiss_stale_reviews": true,
-              "required_approving_review_count": 1
+              "required_approving_review_count": 0
             },
             "restrictions": null,
             "required_linear_history": false,
@@ -318,15 +318,15 @@ jobs:
             -H "X-GitHub-Api-Version: 2026-03-10" \
             "/repos/${ORG_NAME}/${REPO_NAME}/branches/dev/protection" \
             --input - <<'JSON'
-          {
+          {``
             "required_status_checks": {
               "strict": true,
               "contexts": ["Validate PR title and branch flow"]
             },
             "enforce_admins": true,
             "required_pull_request_reviews": {
-              "dismiss_stale_reviews": true,
-              "required_approving_review_count": 1
+              "dismiss_stale_reviews": true,      
+              "required_approving_review_count": 0
             },
             "restrictions": null,
             "required_linear_history": false,
