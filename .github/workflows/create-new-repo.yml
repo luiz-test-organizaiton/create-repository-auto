@@ -30,6 +30,7 @@ jobs:
       GH_TOKEN: ${{ secrets.ORG_ADMIN_TOKEN }}
 
     steps:
+#Checa se o nome do repo é valido
       - name: Validate repository name
         run: |
           set -euo pipefail
@@ -40,6 +41,7 @@ jobs:
             exit 1
           fi
 
+#Checa de o nome que foi adicionado para o repo, já não existe.
       - name: Check if repository already exists
         run: |
           set -euo pipefail
@@ -49,6 +51,7 @@ jobs:
             exit 1
           fi
 
+#Realiza a criação do repositorio
       - name: Create repository
         run: |
           set -euo pipefail
@@ -61,6 +64,7 @@ jobs:
             -F private=true \
             -F auto_init=true
 
+#Adiciona o time de Devops como admin do repo
       - name: Add devops team as admin
         run: |
           set -euo pipefail
@@ -71,6 +75,7 @@ jobs:
             "/orgs/${ORG_NAME}/teams/${DEVOPS_TEAM_SLUG}/repos/${ORG_NAME}/${REPO_NAME}" \
             -f permission="admin"
 
+#Adiona a permisão ao time selecionado na hora da criacao como write no repo.
       - name: Add selected team as write
         run: |
           set -euo pipefail
@@ -81,6 +86,7 @@ jobs:
             "/orgs/${ORG_NAME}/teams/${SELECTED_TEAM_SLUG}/repos/${ORG_NAME}/${REPO_NAME}" \
             -f permission="push"
 
+#Criar o readme.md e criar as pastas .github/workflows/ com o devido conteudo dentro
       - name: Bootstrap repository structure
         run: |
           set -euo pipefail
@@ -112,7 +118,8 @@ jobs:
           git add README.md .github/workflows/.gitkeep
           git commit -m "chore: bootstrap repository structure"
           git push origin HEAD
-        
+
+#Criação das branchs, dev, staging e master. Colocando a master como default branch
       - name: Bootstrap repository structure
         run: |
           set -euo pipefail
@@ -141,7 +148,18 @@ jobs:
           git checkout master
           git checkout -b dev
           git push origin dev
-        
+
+#Delete branch main(default)
+      - name: Bootstrap repository structure
+        run: |
+          set -euo pipefail
+
+          gh api \
+            --method DELETE \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${ORG_NAME}/${REPO_NAME}/git/refs/heads/main" || true
+
+#Informativo final
       - name: Summary
         run: |
           {
@@ -153,6 +171,7 @@ jobs:
             echo "- Estrutura inicial:"
             echo "  - \`README.md\`"
             echo "  - \`.github/workflows/.gitkeep\`"
+
           } >> "$GITHUB_STEP_SUMMARY"
 
         
