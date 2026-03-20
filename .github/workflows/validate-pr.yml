@@ -37,13 +37,6 @@ jobs:
 
           if [[ ! "${PR_TITLE}" =~ ${REGEX} ]]; then
             echo "Título da PR inválido."
-            echo "Use um dos padrões abaixo:"
-            echo "  Fix: xxxxx"
-            echo "  Feat: xxxxx"
-            echo "  Docs: xxxxx"
-            echo "  Chore: xxxxx"
-            echo "  Refactor: xxxxx"
-            echo "É obrigatório ter pelo menos 5 caracteres após ': '"
             exit 1
           fi
 
