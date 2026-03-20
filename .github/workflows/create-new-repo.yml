@@ -135,7 +135,7 @@ jobs:
               steps:
                 - name: Validate PR title pattern
                   env:
-                    PR_TITLE: ${{ github.event.pull_request.title }}
+                    PR_TITLE: ${{ '${{ github.event.pull_request.title }}' }}
                   run: |
                     set -euo pipefail
 
@@ -157,8 +157,8 @@ jobs:
 
                 - name: Validate branch flow
                   env:
-                    BASE_REF: ${{ github.event.pull_request.base.ref }}
-                    HEAD_REF: ${{ github.head_ref }}
+                    BASE_REF: ${{ '${{ github.event.pull_request.base.ref }}' }}
+                    HEAD_REF: ${{ '${{ github.head_ref }}' }}
                   run: |
                     set -euo pipefail
 
