@@ -1,4 +1,4 @@
-name: Create organization repository Boostramp
+name: Create organization repository Bootstrap
 
 on:
   workflow_dispatch:
@@ -30,7 +30,6 @@ jobs:
       GH_TOKEN: ${{ secrets.ORG_ADMIN_TOKEN }}
 
     steps:
-#Checa se o nome do repo é valido
       - name: Validate repository name
         run: |
           set -euo pipefail
@@ -41,7 +40,6 @@ jobs:
             exit 1
           fi
 
-#Checa de o nome que foi adicionado para o repo, já não existe.
       - name: Check if repository already exists
         run: |
           set -euo pipefail
@@ -51,7 +49,6 @@ jobs:
             exit 1
           fi
 
-#Realiza a criação do repositorio
       - name: Create repository
         run: |
           set -euo pipefail
@@ -64,7 +61,6 @@ jobs:
             -F private=true \
             -F auto_init=true
 
-#Adiciona o time de Devops como admin do repo
       - name: Add devops team as admin
         run: |
           set -euo pipefail
@@ -75,7 +71,6 @@ jobs:
             "/orgs/${ORG_NAME}/teams/${DEVOPS_TEAM_SLUG}/repos/${ORG_NAME}/${REPO_NAME}" \
             -f permission="admin"
 
-#Adiona a permisão ao time selecionado na hora da criacao como write no repo.
       - name: Add selected team as write
         run: |
           set -euo pipefail
@@ -86,7 +81,6 @@ jobs:
             "/orgs/${ORG_NAME}/teams/${SELECTED_TEAM_SLUG}/repos/${ORG_NAME}/${REPO_NAME}" \
             -f permission="push"
 
-#Criar o readme.md e criar as pastas .github/workflows/ com o devido conteudo dentro
       - name: Bootstrap repository structure
         run: |
           set -euo pipefail
@@ -110,80 +104,84 @@ jobs:
 
           cat > .github/workflows/validate-pr.yml <<'EOF'
           name: Validate PR rules
+
           on:
             pull_request:
-                branches:
-                    - dev
-                    - staging
-                    - master
-                types:
-                    - opened
-                    - edited
-                    - synchronize
-                    - reopened
+              branches:
+                - dev
+                - staging
+                - master
+              types:
+                - opened
+                - edited
+                - synchronize
+                - reopened
+
           permissions:
             contents: read
             pull-requests: read
-            
+
           jobs:
             validate-pr:
-                name: Validate PR title and branch flow
-                runs-on: ubuntu-latest
+              name: Validate PR title and branch flow
+              runs-on: ubuntu-latest
 
-                steps:
-                    - name: Validate PR title pattern
-                        env:
-                            PR_TITLE: ${{ github.event.pull_request.title }}
-                        run: |
-                            set -euo pipefail
+              steps:
+                - name: Validate PR title pattern
+                  env:
+                    PR_TITLE: ${{ '${{ github.event.pull_request.title }}' }}
+                  run: |
+                    set -euo pipefail
 
-                        echo "PR title: ${PR_TITLE}"
+                    echo "PR title: ${PR_TITLE}"
 
-                        REGEX='^(Fix|Feat|Docs|Chore|Refactor): .{5,}$'
+                    REGEX='^(Fix|Feat|Docs|Chore|Refactor): .{5,}$'
 
-                        if [[ ! "${PR_TITLE}" =~ ${REGEX} ]]; then
-                          echo "Título da PR inválido."
-                          exit 1
-                        fi
+                    if [[ ! "${PR_TITLE}" =~ ${REGEX} ]]; then
+                      echo "Título da PR inválido."
+                      echo "Use um dos padrões abaixo:"
+                      echo "  Fix: xxxxx"
+                      echo "  Feat: xxxxx"
+                      echo "  Docs: xxxxx"
+                      echo "  Chore: xxxxx"
+                      echo "  Refactor: xxxxx"
+                      echo "É obrigatório ter pelo menos 5 caracteres após ': '"
+                      exit 1
+                    fi
 
-                    - name: Validate branch flow
-                    env:
-                        BASE_REF: ${{ github.event.pull_request.base.ref }}
-                        HEAD_REF: ${{ github.head_ref }}
-                    run: |
-                        set -euo pipefail
+                - name: Validate branch flow
+                  env:
+                    BASE_REF: ${{ '${{ github.event.pull_request.base.ref }}' }}
+                    HEAD_REF: ${{ '${{ github.head_ref }}' }}
+                  run: |
+                    set -euo pipefail
 
-                        echo "Base branch: ${BASE_REF}"
-                        echo "Head branch: ${HEAD_REF}"
+                    echo "Base branch: ${BASE_REF}"
+                    echo "Head branch: ${HEAD_REF}"
 
-                        if [[ "${BASE_REF}" == "staging" && "${HEAD_REF}" != "dev" ]]; then
-                          echo "PR inválida: staging só aceita PR de dev."
-                          exit 1
-                        fi
+                    if [[ "${BASE_REF}" == "staging" && "${HEAD_REF}" != "dev" ]]; then
+                      echo "PR inválida: a branch staging só pode receber PR da branch dev."
+                      exit 1
+                    fi
 
-                        if [[ "${BASE_REF}" == "master" && "${HEAD_REF}" != "staging" ]]; then
-                          echo "PR inválida: master só aceita PR de staging."
-                            exit 1
-                        fi
+                    if [[ "${BASE_REF}" == "master" && "${HEAD_REF}" != "staging" ]]; then
+                      echo "PR inválida: a branch master só pode receber PR da branch staging."
+                      exit 1
+                    fi
 
-                        echo "Fluxo válido."
-          EOF              
-
-
-          
+                    echo "Fluxo de branches válido."
+          EOF
 
           if git diff --quiet && git diff --cached --quiet && [ -z "$(git status --porcelain)" ]; then
             echo "Nenhuma alteração para commit."
             exit 0
           fi
-          
 
           git add README.md .github/workflows/validate-pr.yml
           git commit -m "chore: bootstrap repository structure"
           git push origin HEAD
 
-#Criação das branchs, dev, staging e master. Colocando a master como default branch
-      - name: Bootstrap repository structure
+      - name: Create master, staging and dev branches
         run: |
           set -euo pipefail
 
@@ -193,18 +191,15 @@ jobs:
           git clone "https://x-access-token:${GH_TOKEN}@github.com/${ORG_NAME}/${REPO_NAME}.git"
           cd "${REPO_NAME}"
 
-          # Cria master a partir da branch atual (main)
           git checkout -b master
           git push origin master
 
-          # Muda default branch para master
           gh api \
             --method PATCH \
             -H "Accept: application/vnd.github+json" \
             "/repos/${ORG_NAME}/${REPO_NAME}" \
             -f default_branch="master"
 
-          # Cria staging e dev a partir de master
           git checkout -b staging
           git push origin staging
 
@@ -212,8 +207,7 @@ jobs:
           git checkout -b dev
           git push origin dev
 
-#Delete branch main(default)
-      - name: Bootstrap repository structure
+      - name: Delete main branch
         run: |
           set -euo pipefail
 
@@ -222,7 +216,6 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             "/repos/${ORG_NAME}/${REPO_NAME}/git/refs/heads/main" || true
 
-#Informativo final
       - name: Summary
         run: |
           {
@@ -231,11 +224,12 @@ jobs:
             echo "- Repositório: \`${ORG_NAME}/${REPO_NAME}\`"
             echo "- Time admin: \`${DEVOPS_TEAM_SLUG}\`"
             echo "- Time write: \`${SELECTED_TEAM_SLUG}\`"
+            echo "- Branch default: \`master\`"
+            echo "- Branches criadas:"
+            echo "  - \`master\`"
+            echo "  - \`staging\`"
+            echo "  - \`dev\`"
             echo "- Estrutura inicial:"
             echo "  - \`README.md\`"
-            echo "  - \`.github/workflows/.gitkeep\`"
-
+            echo "  - \`.github/workflows/validate-pr.yml\`"
           } >> "$GITHUB_STEP_SUMMARY"
-
-        
-        
