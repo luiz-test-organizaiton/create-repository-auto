@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       repo_name:
-        description: "Nome do repositório a ser criado: "
+        description: "Nome do repositório a ser criado"
         required: true
         type: string
       team_slug:
-        description: "Equipe com permissão de write: "
+        description: "Equipe com permissão de write"
         required: true
         type: choice
         options:
@@ -81,6 +81,38 @@ jobs:
             "/orgs/${ORG_NAME}/teams/${SELECTED_TEAM_SLUG}/repos/${ORG_NAME}/${REPO_NAME}" \
             -f permission="push"
 
+      - name: Bootstrap repository structure
+        run: |
+          set -euo pipefail
+
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          WORKDIR="$(mktemp -d)"
+          cd "${WORKDIR}"
+
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/${ORG_NAME}/${REPO_NAME}.git"
+          cd "${REPO_NAME}"
+
+          mkdir -p .github/workflows
+
+          if [ ! -f README.md ]; then
+            cat > README.md <<EOF
+          # ${REPO_NAME}
+          EOF
+          fi
+
+          touch .github/workflows/.gitkeep
+
+          if git diff --quiet && git diff --cached --quiet && [ -z "$(git status --porcelain)" ]; then
+            echo "Nenhuma alteração para commit."
+            exit 0
+          fi
+
+          git add README.md .github/workflows/.gitkeep
+          git commit -m "chore: bootstrap repository structure"
+          git push origin HEAD
+
       - name: Summary
         run: |
           {
@@ -89,4 +121,7 @@ jobs:
             echo "- Repositório: \`${ORG_NAME}/${REPO_NAME}\`"
             echo "- Time admin: \`${DEVOPS_TEAM_SLUG}\`"
             echo "- Time write: \`${SELECTED_TEAM_SLUG}\`"
+            echo "- Estrutura inicial:"
+            echo "  - \`README.md\`"
+            echo "  - \`.github/workflows/.gitkeep\`"
           } >> "$GITHUB_STEP_SUMMARY"
