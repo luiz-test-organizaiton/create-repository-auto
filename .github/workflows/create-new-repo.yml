@@ -207,6 +207,33 @@ jobs:
           git checkout -b dev
           git push origin dev
 
+      - name: Protect staging branch
+        run: |
+          gh api \
+            --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${ORG_NAME}/${REPO_NAME}/branches/staging/protection" \
+            -f required_status_checks.strict=true \
+            -f required_status_checks.contexts[]="Validate PR title and branch flow" \
+            -f enforce_admins=true \
+            -f required_pull_request_reviews.dismiss_stale_reviews=true \
+            -f required_pull_request_reviews.required_approving_review_count=1 \
+            -f restrictions=null
+      
+      - name: Protect master branch
+        run: |
+          gh api \
+            --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${ORG_NAME}/${REPO_NAME}/branches/master/protection" \
+            -f required_status_checks.strict=true \
+            -f required_status_checks.contexts[]="Validate PR title and branch flow" \
+            -f enforce_admins=true \
+            -f required_pull_request_reviews.dismiss_stale_reviews=true \
+            -f required_pull_request_reviews.required_approving_review_count=1 \
+            -f restrictions=null
+      
+
       - name: Delete main branch
         run: |
           set -euo pipefail
