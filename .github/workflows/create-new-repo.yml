@@ -108,14 +108,77 @@ jobs:
           EOF
           fi
 
-          touch .github/workflows/.gitkeep
+          cat > .github/workflows/validate-pr.yml <<'EOF'
+          name: Validate PR rules
+          on:
+            pull_request:
+                branches:
+                    - dev
+                    - staging
+                    - master
+                types:
+                    - opened
+                    - edited
+                    - synchronize
+                    - reopened
+          permissions:
+            contents: read
+            pull-requests: read
+            
+          jobs:
+            validate-pr:
+                name: Validate PR title and branch flow
+                runs-on: ubuntu-latest
+
+                steps:
+                    - name: Validate PR title pattern
+                    env:
+                        PR_TITLE: ${{ github.event.pull_request.title }}
+                    run: |
+                        set -euo pipefail
+
+                        echo "PR title: ${PR_TITLE}"
+
+                        REGEX='^(Fix|Feat|Docs|Chore|Refactor): .{5,}$'
+
+                        if [[ ! "${PR_TITLE}" =~ ${REGEX} ]]; then
+                          echo "Título da PR inválido."
+                          exit 1
+                        fi
+
+                    - name: Validate branch flow
+                    env:
+                        BASE_REF: ${{ github.event.pull_request.base.ref }}
+                        HEAD_REF: ${{ github.head_ref }}
+                    run: |
+                        set -euo pipefail
+
+                        echo "Base branch: ${BASE_REF}"
+                        echo "Head branch: ${HEAD_REF}"
+
+                        if [[ "${BASE_REF}" == "staging" && "${HEAD_REF}" != "dev" ]]; then
+                          echo "PR inválida: staging só aceita PR de dev."
+                          exit 1
+                        fi
+
+                        if [[ "${BASE_REF}" == "master" && "${HEAD_REF}" != "staging" ]]; then
+                          echo "PR inválida: master só aceita PR de staging."
+                            exit 1
+                        fi
+
+                        echo "Fluxo válido."
+          EOF              
+
+
+          
 
           if git diff --quiet && git diff --cached --quiet && [ -z "$(git status --porcelain)" ]; then
             echo "Nenhuma alteração para commit."
             exit 0
           fi
+          
 
-          git add README.md .github/workflows/.gitkeep
+          git add README.md .github/workflows/validate-pr.yml
           git commit -m "chore: bootstrap repository structure"
           git push origin HEAD
 
