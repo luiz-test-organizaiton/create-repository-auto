@@ -4,18 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       repo_name:
-        description: "Nome do repositório a ser criado"
+        description: "Nome do repositório a ser criado: "
         required: true
         type: string
       team_slug:
-        description: "Equipe com permissão de write"
+        description: "Equipe com permissão de write: "
         required: true
         type: choice
         options:
-          - backend
-          - frontend
-          - sre
+          - back-end
           - devops
+          - sre
 
 permissions: {}
 
@@ -24,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      ORG_NAME: BSATECH
+      ORG_NAME: luiz-test-organizaiton
       DEVOPS_TEAM_SLUG: devops
       REPO_NAME: ${{ inputs.repo_name }}
       SELECTED_TEAM_SLUG: ${{ inputs.team_slug }}
