@@ -1,0 +1,93 @@
+name: Create organization repository
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_name:
+        description: "Nome do repositório a ser criado"
+        required: true
+        type: string
+      team_slug:
+        description: "Equipe com permissão de write"
+        required: true
+        type: choice
+        options:
+          - backend
+          - frontend
+          - sre
+          - devops
+
+permissions: {}
+
+jobs:
+  create-repo:
+    runs-on: ubuntu-latest
+
+    env:
+      ORG_NAME: BSATECH
+      DEVOPS_TEAM_SLUG: devops
+      REPO_NAME: ${{ inputs.repo_name }}
+      SELECTED_TEAM_SLUG: ${{ inputs.team_slug }}
+      GH_TOKEN: ${{ secrets.ORG_ADMIN_TOKEN }}
+
+    steps:
+      - name: Validate repository name
+        run: |
+          set -euo pipefail
+
+          if [[ ! "${REPO_NAME}" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+            echo "Nome de repositório inválido: ${REPO_NAME}"
+            echo "Use apenas letras, números, ponto, underline e hífen."
+            exit 1
+          fi
+
+      - name: Check if repository already exists
+        run: |
+          set -euo pipefail
+
+          if gh api "repos/${ORG_NAME}/${REPO_NAME}" >/dev/null 2>&1; then
+            echo "O repositório ${ORG_NAME}/${REPO_NAME} já existe."
+            exit 1
+          fi
+
+      - name: Create repository
+        run: |
+          set -euo pipefail
+
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "/orgs/${ORG_NAME}/repos" \
+            -f name="${REPO_NAME}" \
+            -F private=true \
+            -F auto_init=true
+
+      - name: Add devops team as admin
+        run: |
+          set -euo pipefail
+
+          gh api \
+            --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            "/orgs/${ORG_NAME}/teams/${DEVOPS_TEAM_SLUG}/repos/${ORG_NAME}/${REPO_NAME}" \
+            -f permission="admin"
+
+      - name: Add selected team as write
+        run: |
+          set -euo pipefail
+
+          gh api \
+            --method PUT \
+            -H "Accept: application/vnd.github+json" \
+            "/orgs/${ORG_NAME}/teams/${SELECTED_TEAM_SLUG}/repos/${ORG_NAME}/${REPO_NAME}" \
+            -f permission="push"
+
+      - name: Summary
+        run: |
+          {
+            echo "## Repositório criado com sucesso"
+            echo ""
+            echo "- Repositório: \`${ORG_NAME}/${REPO_NAME}\`"
+            echo "- Time admin: \`${DEVOPS_TEAM_SLUG}\`"
+            echo "- Time write: \`${SELECTED_TEAM_SLUG}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
