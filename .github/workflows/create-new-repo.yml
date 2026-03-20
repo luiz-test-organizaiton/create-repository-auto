@@ -1,4 +1,4 @@
-name: Create organization repository
+name: Create organization repository Boostramp
 
 on:
   workflow_dispatch:
@@ -112,7 +112,36 @@ jobs:
           git add README.md .github/workflows/.gitkeep
           git commit -m "chore: bootstrap repository structure"
           git push origin HEAD
+        
+      - name: Bootstrap repository structure
+        run: |
+          set -euo pipefail
 
+          WORKDIR="$(mktemp -d)"
+          cd "${WORKDIR}"
+
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/${ORG_NAME}/${REPO_NAME}.git"
+          cd "${REPO_NAME}"
+
+          # Cria master a partir da branch atual (main)
+          git checkout -b master
+          git push origin master
+
+          # Muda default branch para master
+          gh api \
+            --method PATCH \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${ORG_NAME}/${REPO_NAME}" \
+            -f default_branch="master"
+
+          # Cria staging e dev a partir de master
+          git checkout -b staging
+          git push origin staging
+
+          git checkout master
+          git checkout -b dev
+          git push origin dev
+        
       - name: Summary
         run: |
           {
@@ -125,3 +154,6 @@ jobs:
             echo "  - \`README.md\`"
             echo "  - \`.github/workflows/.gitkeep\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+        
+        

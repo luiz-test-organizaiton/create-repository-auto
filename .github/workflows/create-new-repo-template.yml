@@ -1,0 +1,19 @@
+name: Create organization repository Boostramp
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_name:
+        description: "Nome do repositório a ser criado"
+        required: true
+        type: string
+      team_slug:
+        description: "Equipe com permissão de write"
+        required: true
+        type: choice
+        options:
+          - back-end
+          - devops
+          - sre
+
+permissions: {}
