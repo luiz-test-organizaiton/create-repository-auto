@@ -1,0 +1,203 @@
+name: Create organization repository Bootstrap
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_name:
+        description: "Nome do repositório a ser criado"
+        required: true
+        type: string
+      team_slug:
+        description: "Equipe com permissão de write"
+        required: true
+        type: choice
+        options:
+          - back-end
+          - sre
+
+permissions: {}
+
+jobs:
+  create-repo:
+    runs-on: ubuntu-latest
+
+    env:
+      ORG_NAME: luiz-test-organizaiton
+      DEVOPS_TEAM_SLUG: devops
+      REPO_NAME: ${{ inputs.repo_name }}
+      SELECTED_TEAM_SLUG: ${{ inputs.team_slug }}
+      GH_TOKEN: ${{ secrets.ORG_ADMIN_TOKEN }}
+
+    steps:
+      - name: Validate repository name
+        run: |
+          set -euo pipefail
+
+          if [[ ! "${REPO_NAME}" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+            echo "Nome de repositório inválido: ${REPO_NAME}"
+            exit 1
+          fi
+
+      - name: Check if repository already exists
+        run: |
+          set -euo pipefail
+
+          if gh api repos/${ORG_NAME}/${REPO_NAME} >/dev/null 2>&1; then
+            echo "Repo já existe"
+            exit 1
+          fi
+
+      - name: Create repository
+        run: |
+          gh api --method POST /orgs/${ORG_NAME}/repos \
+            -f name="${REPO_NAME}" \
+            -F private=false \
+            -F auto_init=true
+
+      - name: Add teams
+        run: |
+          gh api --method PUT /orgs/${ORG_NAME}/teams/${DEVOPS_TEAM_SLUG}/repos/${ORG_NAME}/${REPO_NAME} -f permission=admin
+          gh api --method PUT /orgs/${ORG_NAME}/teams/${SELECTED_TEAM_SLUG}/repos/${ORG_NAME}/${REPO_NAME} -f permission=push
+
+      - name: Bootstrap repo
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git clone https://x-access-token:${GH_TOKEN}@github.com/${ORG_NAME}/${REPO_NAME}.git
+          cd ${REPO_NAME}
+
+          mkdir -p .github/workflows
+
+          echo "# ${REPO_NAME}" > README.md
+
+          cat > .github/workflows/validate-pr.yml <<'EOF'
+          name: Validate PR rules
+
+          on:
+            pull_request:
+
+          jobs:
+            validate:
+              runs-on: ubuntu-latest
+              steps:
+                - name: Validate PR
+                  run: |
+                    TITLE="${{ github.event.pull_request.title }}"
+                    BASE="${{ github.event.pull_request.base.ref }}"
+                    HEAD="${{ github.head_ref }}"
+
+                    echo "TITLE=$TITLE"
+                    echo "BASE=$BASE"
+                    echo "HEAD=$HEAD"
+
+                    if [[ ! "$TITLE" =~ ^(fix|feat|docs|chore|refactor):\ .{5,}$ ]]; then
+                      echo "Invalid PR title"
+                      exit 1
+                    fi
+
+                    if [[ "$BASE" == "hml" && "$HEAD" != "dev" ]]; then exit 1; fi
+                    if [[ "$BASE" == "staging" && "$HEAD" != "hml" ]]; then exit 1; fi
+                    if [[ "$BASE" == "master" && "$HEAD" != "staging" ]]; then exit 1; fi
+          EOF
+
+          cat > .github/workflows/python-ci.yml <<'EOF'
+          name: Python CI
+
+          on:
+            pull_request:
+            push:
+              branches: [dev,hml,staging,master]
+
+          jobs:
+            python-quality:
+              runs-on: ubuntu-latest
+              steps:
+                - uses: actions/checkout@v4
+                - uses: actions/setup-python@v5
+                  with:
+                    python-version: "3.11"
+                - run: pip install black pylint bandit
+                - run: |
+                    PY_FILES=$(find . -name "*.py" | tr '\n' ' ')
+                    echo "PY_FILES=$PY_FILES" >> $GITHUB_ENV
+                - run: |
+                    if [ -z "$PY_FILES" ]; then exit 0; fi
+                    black --check $PY_FILES || echo "Black issues"
+                - run: |
+                    if [ -z "$PY_FILES" ]; then exit 0; fi
+                    pylint --fail-under=3.0 --disable=C0114,C0115,C0116,C0412,R0903 $PY_FILES
+                - run: |
+                    if [ -z "$PY_FILES" ]; then exit 0; fi
+                    bandit -r . -s B101
+          EOF
+
+          git add .
+          git commit -m "bootstrap repo"
+          git push
+
+      - name: Create branches
+        run: |
+          git clone https://x-access-token:${GH_TOKEN}@github.com/${ORG_NAME}/${REPO_NAME}.git
+          cd ${REPO_NAME}
+
+          git checkout -b master && git push origin master
+          gh api --method PATCH /repos/${ORG_NAME}/${REPO_NAME} -f default_branch=master
+
+          git checkout -b staging && git push origin staging
+          git checkout -b hml && git push origin hml
+          git checkout master && git checkout -b dev && git push origin dev
+
+      - name: Protect dev
+        run: |
+          gh api --method PUT /repos/${ORG_NAME}/${REPO_NAME}/branches/dev/protection --input - <<'JSON'
+          {
+            "required_status_checks": {"strict": true,"contexts": ["Validate PR rules","Python CI"]},
+            "enforce_admins": true,
+            "required_pull_request_reviews": null,
+            "restrictions": null
+          }
+          JSON
+
+      - name: Protect hml
+        run: |
+          gh api --method PUT /repos/${ORG_NAME}/${REPO_NAME}/branches/hml/protection --input - <<'JSON'
+          {
+            "required_status_checks": {"strict": true,"contexts": ["Validate PR rules","Python CI"]},
+            "enforce_admins": true,
+            "required_pull_request_reviews": {"required_approving_review_count": 2},
+            "restrictions": null
+          }
+          JSON
+
+      - name: Protect staging
+        run: |
+          gh api --method PUT /repos/${ORG_NAME}/${REPO_NAME}/branches/staging/protection --input - <<'JSON'
+          {
+            "required_status_checks": {"strict": true,"contexts": ["Validate PR rules","Python CI"]},
+            "enforce_admins": true,
+            "required_pull_request_reviews": {"required_approving_review_count": 2},
+            "restrictions": null
+          }
+          JSON
+
+      - name: Protect master
+        run: |
+          gh api --method PUT /repos/${ORG_NAME}/${REPO_NAME}/branches/master/protection --input - <<'JSON'
+          {
+            "required_status_checks": {"strict": true,"contexts": ["Validate PR rules","Python CI"]},
+            "enforce_admins": true,
+            "required_pull_request_reviews": {"required_approving_review_count": 2},
+            "restrictions": {
+              "users": ["juan","alex","silvio"],
+              "teams": []
+            }
+          }
+          JSON
+
+      - name: Delete main
+        run: |
+          gh api --method DELETE /repos/${ORG_NAME}/${REPO_NAME}/git/refs/heads/main || true
+
+      - name: Summary
+        run: echo "Repo criado com sucesso"
