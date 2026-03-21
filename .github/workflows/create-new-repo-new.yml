@@ -91,7 +91,7 @@ jobs:
                     echo "BASE=$BASE"
                     echo "HEAD=$HEAD"
 
-                    if [[ ! "$TITLE" =~ ^(fix|feat|docs|chore|refactor):\ .{5,}$ ]]; then
+                    if [[ ! "$TITLE" =~ ^(fix|feat|docs|chore|refactor|style|perf|test):\ .{5,}$ ]]; then
                       echo "Invalid PR title"
                       exit 1
                     fi
@@ -189,7 +189,7 @@ jobs:
             "enforce_admins": true,
             "required_pull_request_reviews": {"required_approving_review_count": 2},
             "restrictions": {
-              "users": ["juan","alex","silvio"],
+              "users": ["jpntf","alex-odilon","silvioaraujoopa"],
               "teams": []
             }
           }
