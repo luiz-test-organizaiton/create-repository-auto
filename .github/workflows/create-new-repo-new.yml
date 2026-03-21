@@ -174,6 +174,7 @@ jobs:
 
           jobs:
             python-quality:
+              name: Python quality
               runs-on: ubuntu-latest
 
               steps:
@@ -240,7 +241,7 @@ jobs:
           {
             "required_status_checks": {
               "strict": true,
-              "contexts": ["Validate PR title and branch flow", "Python CI / python-quality"]
+              "contexts": ["Validate PR title and branch flow", "Python quality"]
             },
             "enforce_admins": true,
             "required_pull_request_reviews": {
@@ -259,7 +260,7 @@ jobs:
           {
             "required_status_checks": {
               "strict": true,
-              "contexts": ["Validate PR title and branch flow", "Python CI / python-quality"]
+              "contexts": ["Validate PR title and branch flow", "Python quality"]
             },
             "enforce_admins": true,
             "required_pull_request_reviews": {
@@ -275,7 +276,7 @@ jobs:
           {
             "required_status_checks": {
               "strict": true,
-              "contexts": ["Validate PR title and branch flow", "Python CI / python-quality"]
+              "contexts": ["Validate PR title and branch flow", "Python quality"]
             },
             "enforce_admins": true,
             "required_pull_request_reviews": {
@@ -291,7 +292,7 @@ jobs:
           {
             "required_status_checks": {
               "strict": true,
-              "contexts": ["Validate PR title and branch flow", "Python CI / python-quality"]
+              "contexts": ["Validate PR title and branch flow", "Python quality"]
             },
             "enforce_admins": true,
             "required_pull_request_reviews": null,
