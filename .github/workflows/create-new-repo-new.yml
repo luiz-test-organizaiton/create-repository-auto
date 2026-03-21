@@ -240,7 +240,7 @@ jobs:
           {
             "required_status_checks": {
               "strict": true,
-              "contexts": ["Validate PR title and branch flow", "Python CI"]
+              "contexts": ["Validate PR title and branch flow", "Python CI / python-quality"]
             },
             "enforce_admins": true,
             "required_pull_request_reviews": {
@@ -259,7 +259,7 @@ jobs:
           {
             "required_status_checks": {
               "strict": true,
-              "contexts": ["Validate PR title and branch flow", "Python CI"]
+              "contexts": ["Validate PR title and branch flow", "Python CI / python-quality"]
             },
             "enforce_admins": true,
             "required_pull_request_reviews": {
@@ -275,7 +275,7 @@ jobs:
           {
             "required_status_checks": {
               "strict": true,
-              "contexts": ["Validate PR title and branch flow", "Python CI"]
+              "contexts": ["Validate PR title and branch flow", "Python CI / python-quality"]
             },
             "enforce_admins": true,
             "required_pull_request_reviews": {
@@ -291,7 +291,7 @@ jobs:
           {
             "required_status_checks": {
               "strict": true,
-              "contexts": ["Validate PR title and branch flow", "Python CI"]
+              "contexts": ["Validate PR title and branch flow", "Python CI / python-quality"]
             },
             "enforce_admins": true,
             "required_pull_request_reviews": null,
