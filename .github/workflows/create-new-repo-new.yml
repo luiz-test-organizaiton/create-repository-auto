@@ -149,15 +149,35 @@ jobs:
                     fi
 
                 - name: Validate branch flow
-                  env:
-                    BASE_REF: ${{ github.base_ref }}
-                    HEAD_REF: ${{ github.head_ref }}
+                  shell: bash
                   run: |
                     set -euo pipefail
 
-                    if [[ "${BASE_REF}" == "hml" && "${HEAD_REF}" != "dev" ]]; then exit 1; fi
-                    if [[ "${BASE_REF}" == "staging" && "${HEAD_REF}" != "hml" ]]; then exit 1; fi
-                    if [[ "${BASE_REF}" == "master" && "${HEAD_REF}" != "staging" ]]; then exit 1; fi
+                    BASE_REF="$(jq -r '.pull_request.base.ref // empty' "$GITHUB_EVENT_PATH")"
+                    HEAD_REF="$(jq -r '.pull_request.head.ref // empty' "$GITHUB_EVENT_PATH")"
+
+                    echo "BASE_REF=${BASE_REF}"
+                    echo "HEAD_REF=${HEAD_REF}"
+
+                    if [[ -z "${BASE_REF}" || -z "${HEAD_REF}" ]]; then
+                      echo "Não foi possível obter base/head da PR"
+                      exit 1
+                    fi
+
+                    if [[ "${BASE_REF}" == "hml" && "${HEAD_REF}" != "dev" ]]; then
+                      echo "Fluxo inválido: hml só aceita PR de dev"
+                      exit 1
+                    fi
+
+                    if [[ "${BASE_REF}" == "staging" && "${HEAD_REF}" != "hml" ]]; then
+                      echo "Fluxo inválido: staging só aceita PR de hml"
+                      exit 1
+                    fi
+
+                    if [[ "${BASE_REF}" == "master" && "${HEAD_REF}" != "staging" ]]; then
+                      echo "Fluxo inválido: master só aceita PR de staging"
+                      exit 1
+                    fi
           EOF
 
           cat > .github/workflows/python-ci.yml <<'EOF'
