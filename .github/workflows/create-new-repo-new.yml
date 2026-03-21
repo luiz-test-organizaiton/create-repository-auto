@@ -226,14 +226,14 @@ jobs:
           {
             "required_status_checks": {
               "strict": true,
-              "contexts": ["Validate PR title and branch flow","Python CI"]
+              "contexts": ["Validate PR title and branch flow", "Python CI"]
             },
             "enforce_admins": true,
             "required_pull_request_reviews": {
               "required_approving_review_count": 2
             },
             "restrictions": {
-              "users": ["jpntf","alex-odilon","silvioaraujoopa"],
+              "users": ["jpntf", "alex-odilon", "silvioaraujoopa"],
               "teams": []
             }
           }
@@ -245,12 +245,12 @@ jobs:
           {
             "required_status_checks": {
               "strict": true,
-              "contexts": ["Validate PR title and branch flow","Python CI"]
+              "contexts": ["Validate PR title and branch flow", "Python CI"]
             },
             "enforce_admins": true,
             "required_pull_request_reviews": {
               "required_approving_review_count": 2
-            }
+            },
             "restrictions": null
           }
           JSON
@@ -261,12 +261,12 @@ jobs:
           {
             "required_status_checks": {
               "strict": true,
-              "contexts": ["Validate PR title and branch flow","Python CI"]
+              "contexts": ["Validate PR title and branch flow", "Python CI"]
             },
             "enforce_admins": true,
             "required_pull_request_reviews": {
               "required_approving_review_count": 2
-            }
+            },
             "restrictions": null
           }
           JSON
@@ -277,10 +277,11 @@ jobs:
           {
             "required_status_checks": {
               "strict": true,
-              "contexts": ["Validate PR title and branch flow","Python CI"]
+              "contexts": ["Validate PR title and branch flow", "Python CI"]
             },
             "enforce_admins": true,
-            "required_pull_request_reviews": null
+            "required_pull_request_reviews": null,
+            "restrictions": null
           }
           JSON
 
