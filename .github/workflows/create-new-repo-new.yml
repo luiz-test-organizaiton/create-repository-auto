@@ -136,7 +136,7 @@ jobs:
 
                 - name: Validate branch flow
                   env:
-                    BASE_REF: ${{ github.event.pull_request.base.ref }}
+                    BASE_REF: ${{ github.base_ref }}
                     HEAD_REF: ${{ github.head_ref }}
                   run: |
                     set -euo pipefail
