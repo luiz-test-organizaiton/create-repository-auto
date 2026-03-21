@@ -32,20 +32,18 @@ jobs:
       - name: Validate repository name
         run: |
           set -euo pipefail
-
           if [[ ! "${REPO_NAME}" =~ ^[a-zA-Z0-9._-]+$ ]]; then
-            echo "Nome de repositório inválido: ${REPO_NAME}"
+            echo "Nome inválido"
             exit 1
           fi
 
-      - name: Check if repository already exists
+      - name: Check repo existence
         run: |
           set -euo pipefail
-
-          if gh api repos/${ORG_NAME}/${REPO_NAME} >/dev/null 2>&1; then
+          gh api repos/${ORG_NAME}/${REPO_NAME} >/dev/null 2>&1 && {
             echo "Repo já existe"
             exit 1
-          fi
+          }
 
       - name: Create repository
         run: |
@@ -61,6 +59,8 @@ jobs:
 
       - name: Bootstrap repo
         run: |
+          set -euo pipefail
+
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
@@ -71,7 +71,7 @@ jobs:
 
           echo "# ${REPO_NAME}" > README.md
 
-          cat > .github/workflows/validate-pr.yml <<'EOF'
+          cat > .github/workflows/validate-pr.yml <<EOF
           name: Validate PR rules
 
           on:
@@ -79,6 +79,7 @@ jobs:
 
           jobs:
             validate:
+              name: Validate PR title and branch flow
               runs-on: ubuntu-latest
               steps:
                 - name: Validate PR
@@ -87,21 +88,17 @@ jobs:
                     BASE="${{ github.event.pull_request.base.ref }}"
                     HEAD="${{ github.head_ref }}"
 
-                    echo "TITLE=$TITLE"
-                    echo "BASE=$BASE"
-                    echo "HEAD=$HEAD"
-
-                    if [[ ! "$TITLE" =~ ^(fix|feat|docs|chore|refactor|style|perf|test):\ .{5,}$ ]]; then
+                    if [[ ! "\$TITLE" =~ ^(fix|feat|docs|chore|refactor|style|perf|test):\ .{5,}$ ]]; then
                       echo "Invalid PR title"
                       exit 1
                     fi
 
-                    if [[ "$BASE" == "hml" && "$HEAD" != "dev" ]]; then exit 1; fi
-                    if [[ "$BASE" == "staging" && "$HEAD" != "hml" ]]; then exit 1; fi
-                    if [[ "$BASE" == "master" && "$HEAD" != "staging" ]]; then exit 1; fi
+                    if [[ "\$BASE" == "hml" && "\$HEAD" != "dev" ]]; then exit 1; fi
+                    if [[ "\$BASE" == "staging" && "\$HEAD" != "hml" ]]; then exit 1; fi
+                    if [[ "\$BASE" == "master" && "\$HEAD" != "staging" ]]; then exit 1; fi
           EOF
 
-          cat > .github/workflows/python-ci.yml <<'EOF'
+          cat > .github/workflows/python-ci.yml <<EOF
           name: Python CI
 
           on:
@@ -119,22 +116,22 @@ jobs:
                     python-version: "3.11"
                 - run: pip install black pylint bandit
                 - run: |
-                    PY_FILES=$(find . -name "*.py" | tr '\n' ' ')
-                    echo "PY_FILES=$PY_FILES" >> $GITHUB_ENV
+                    PY_FILES=\$(find . -name "*.py" | tr '\n' ' ')
+                    echo "PY_FILES=\$PY_FILES" >> \$GITHUB_ENV
                 - run: |
-                    if [ -z "$PY_FILES" ]; then exit 0; fi
-                    black --check $PY_FILES || echo "Black issues"
+                    if [ -z "\$PY_FILES" ]; then exit 0; fi
+                    black --check \$PY_FILES || echo "Black issues"
                 - run: |
-                    if [ -z "$PY_FILES" ]; then exit 0; fi
-                    pylint --fail-under=3.0 --disable=C0114,C0115,C0116,C0412,R0903 $PY_FILES
+                    if [ -z "\$PY_FILES" ]; then exit 0; fi
+                    pylint --fail-under=3.0 --disable=C0114,C0115,C0116,C0412,R0903 \$PY_FILES
                 - run: |
-                    if [ -z "$PY_FILES" ]; then exit 0; fi
+                    if [ -z "\$PY_FILES" ]; then exit 0; fi
                     bandit -r . -s B101
           EOF
 
-          git add .
-          git commit -m "bootstrap repo"
-          git push
+          git add README.md .github/workflows/validate-pr.yml .github/workflows/python-ci.yml
+          git commit -m "bootstrap repo" || echo "Nada para commit"
+          git push origin HEAD
 
       - name: Create branches
         run: |
@@ -150,9 +147,12 @@ jobs:
 
       - name: Protect dev
         run: |
-          gh api --method PUT /repos/${ORG_NAME}/${REPO_NAME}/branches/dev/protection --input - <<'JSON'
+          gh api --method PUT /repos/${ORG_NAME}/${REPO_NAME}/branches/dev/protection --input - <<JSON
           {
-            "required_status_checks": {"strict": true,"contexts": ["Validate PR rules","Python CI"]},
+            "required_status_checks": {
+              "strict": true,
+              "contexts": ["Validate PR title and branch flow","Python CI"]
+            },
             "enforce_admins": true,
             "required_pull_request_reviews": null,
             "restrictions": null
@@ -161,9 +161,12 @@ jobs:
 
       - name: Protect hml
         run: |
-          gh api --method PUT /repos/${ORG_NAME}/${REPO_NAME}/branches/hml/protection --input - <<'JSON'
+          gh api --method PUT /repos/${ORG_NAME}/${REPO_NAME}/branches/hml/protection --input - <<JSON
           {
-            "required_status_checks": {"strict": true,"contexts": ["Validate PR rules","Python CI"]},
+            "required_status_checks": {
+              "strict": true,
+              "contexts": ["Validate PR title and branch flow","Python CI"]
+            },
             "enforce_admins": true,
             "required_pull_request_reviews": {"required_approving_review_count": 2},
             "restrictions": null
@@ -172,9 +175,12 @@ jobs:
 
       - name: Protect staging
         run: |
-          gh api --method PUT /repos/${ORG_NAME}/${REPO_NAME}/branches/staging/protection --input - <<'JSON'
+          gh api --method PUT /repos/${ORG_NAME}/${REPO_NAME}/branches/staging/protection --input - <<JSON
           {
-            "required_status_checks": {"strict": true,"contexts": ["Validate PR rules","Python CI"]},
+            "required_status_checks": {
+              "strict": true,
+              "contexts": ["Validate PR title and branch flow","Python CI"]
+            },
             "enforce_admins": true,
             "required_pull_request_reviews": {"required_approving_review_count": 2},
             "restrictions": null
@@ -183,9 +189,12 @@ jobs:
 
       - name: Protect master
         run: |
-          gh api --method PUT /repos/${ORG_NAME}/${REPO_NAME}/branches/master/protection --input - <<'JSON'
+          gh api --method PUT /repos/${ORG_NAME}/${REPO_NAME}/branches/master/protection --input - <<JSON
           {
-            "required_status_checks": {"strict": true,"contexts": ["Validate PR rules","Python CI"]},
+            "required_status_checks": {
+              "strict": true,
+              "contexts": ["Validate PR title and branch flow","Python CI"]
+            },
             "enforce_admins": true,
             "required_pull_request_reviews": {"required_approving_review_count": 2},
             "restrictions": {
